@@ -27,7 +27,7 @@ export default function About() {
   </p>
 
   <p className="mt-3 text-sm leading-6 text-slate-200">
-    Una empresa argentina construida con visión, cercanía y compromiso comercial.
+    Tras recorrer 20 países, convivir con el pueblo Shuar en la Amazonía y atravesar el Darién, Patric Emanuel convirtió experiencias extraordinarias en una visión con propósito. MarevaLux nace de esa convicción: con visión, disciplina y determinación, aquello que parece lejano puede convertirse en realidad.
   </p>
 </div>
         </div>
