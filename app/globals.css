@@ -161,3 +161,80 @@ section {
     font-size: 1rem;
   }
 }
+@keyframes aboutFadeLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes aboutFadeRight {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes aboutFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes missionGlow {
+  0%,
+  100% {
+    box-shadow: 0 22px 60px rgba(7, 26, 47, 0.1);
+  }
+
+  50% {
+    box-shadow:
+      0 26px 70px rgba(7, 26, 47, 0.13),
+      0 0 35px rgba(24, 184, 198, 0.08);
+  }
+}
+
+.about-photo-enter {
+  animation: aboutFadeLeft 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.about-copy-enter {
+  animation: aboutFadeRight 850ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.about-orbit {
+  animation: aboutFloat 9s ease-in-out infinite;
+}
+
+.about-orbit-delayed {
+  animation: aboutFloat 11s 1.5s ease-in-out infinite;
+}
+
+.about-mission-glow {
+  animation: missionGlow 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-photo-enter,
+  .about-copy-enter,
+  .about-orbit,
+  .about-orbit-delayed,
+  .about-mission-glow {
+    animation: none;
+  }
+}
