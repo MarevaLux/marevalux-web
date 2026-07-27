@@ -52,7 +52,7 @@ export default function Navbar() {
         visible ? "translate-y-0" : "-translate-y-[130%]"
       }`}
     >
-      <div className="mx-auto max-w-[1040px] overflow-hidden rounded-[22px] border border-white/15 bg-[#071a2f]/95 shadow-[0_20px_60px_rgba(0,0,0,.32)] backdrop-blur-2xl">
+      <div className="mx-auto max-w-[1180px] overflow-hidden rounded-[22px] border border-white/15 bg-[#071a2f]/95 shadow-[0_20px_60px_rgba(0,0,0,.32)] backdrop-blur-2xl">
         <div className="flex h-[68px] items-center justify-between px-4 sm:px-5">
           {/* Logo */}
           <a

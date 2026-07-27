@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ArrowRight,
   Building2,
@@ -17,42 +18,33 @@ const contactPoints = [
 ];
 
 export default function Contact() {
-  function handleSubmit(event) {
+  const [estado, setEstado] = useState("inicial");
+
+  async function handleSubmit(event) {
     event.preventDefault();
+    setEstado("enviando");
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
-    const nombre = formData.get("nombre");
-    const empresa = formData.get("empresa");
-    const email = formData.get("email");
-    const solucion = formData.get("solucion");
-    const clientes = formData.get("clientes");
-    const mensaje = formData.get("mensaje");
+    try {
+      const response = await fetch("https://formspree.io/f/xqerwgjv", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-    const subject = `Evaluar una representación con ${empresa}`;
+      if (!response.ok) {
+        throw new Error("No se pudo enviar la consulta");
+      }
 
-    const body = `
-Hola MarevaLux,
-
-Mi nombre es: ${nombre}
-Empresa: ${empresa}
-Correo electrónico: ${email}
-
-Nuestra solución:
-${solucion}
-
-Empresas o clientes que buscamos desarrollar:
-${clientes}
-
-Información adicional:
-${mensaje || "Sin información adicional."}
-
-Me gustaría evaluar una posible representación comercial con MarevaLux.
-    `.trim();
-
-    window.location.href = `mailto:contact.marevalux@gmail.com?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`;
+      form.reset();
+      setEstado("enviado");
+    } catch {
+      setEstado("error");
+    }
   }
 
   return (
@@ -163,6 +155,12 @@ Me gustaría evaluar una posible representación comercial con MarevaLux.
               </div>
 
               <form onSubmit={handleSubmit} className="mt-9">
+                <input
+                  type="hidden"
+                  name="_subject"
+                  value="Nueva consulta desde MarevaLux"
+                />
+
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
                     <label
@@ -261,7 +259,9 @@ Me gustaría evaluar una posible representación comercial con MarevaLux.
                     className="text-sm font-semibold text-[#14293d]"
                   >
                     Información adicional{" "}
-                    <span className="font-normal text-slate-400">(opcional)</span>
+                    <span className="font-normal text-slate-400">
+                      (opcional)
+                    </span>
                   </label>
 
                   <textarea
@@ -275,20 +275,45 @@ Me gustaría evaluar una posible representación comercial con MarevaLux.
 
                 <button
                   type="submit"
-                  className="mt-7 flex min-h-14 w-full items-center justify-center gap-3 rounded-full bg-[#18b8c6] px-6 font-bold text-[#071a2f] shadow-[0_14px_35px_rgba(24,184,198,.25)] transition hover:-translate-y-0.5 hover:bg-[#37cbd5] hover:shadow-[0_18px_40px_rgba(24,184,198,.32)]"
+                  disabled={estado === "enviando"}
+                  className="mt-7 flex min-h-14 w-full items-center justify-center gap-3 rounded-full bg-[#18b8c6] px-6 font-bold text-[#071a2f] shadow-[0_14px_35px_rgba(24,184,198,.25)] transition hover:-translate-y-0.5 hover:bg-[#37cbd5] hover:shadow-[0_18px_40px_rgba(24,184,198,.32)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
                   <Send size={18} />
-                  Preparar consulta
-                  <ArrowRight size={18} />
+
+                  {estado === "enviando"
+                    ? "Enviando..."
+                    : "Enviar consulta"}
+
+                  {estado !== "enviando" && <ArrowRight size={18} />}
                 </button>
 
-                <div className="mt-5 flex items-start justify-center gap-2 text-center text-xs leading-5 text-slate-500">
-                  <ShieldCheck
-                    size={15}
-                    className="mt-0.5 shrink-0 text-[#0896a5]"
-                  />
-                  Al continuar, se abrirá su aplicación de correo con la
-                  información preparada.
+                <div
+                  className="mt-5 text-center text-sm"
+                  aria-live="polite"
+                >
+                  {estado === "enviado" && (
+                    <p className="font-semibold text-emerald-600">
+                      Consulta enviada correctamente. Nos comunicaremos a la
+                      brevedad.
+                    </p>
+                  )}
+
+                  {estado === "error" && (
+                    <p className="font-semibold text-red-600">
+                      No pudimos enviar la consulta. Inténtelo nuevamente.
+                    </p>
+                  )}
+
+                  {(estado === "inicial" || estado === "enviando") && (
+                    <div className="flex items-start justify-center gap-2 text-xs leading-5 text-slate-500">
+                      <ShieldCheck
+                        size={15}
+                        className="mt-0.5 shrink-0 text-[#0896a5]"
+                      />
+                      Sus datos serán utilizados únicamente para responder esta
+                      consulta.
+                    </div>
+                  )}
                 </div>
               </form>
             </div>

@@ -57,7 +57,7 @@ export default function Hero() {
       <div className="pointer-events-none absolute -right-32 -top-40 h-[560px] w-[560px] rounded-full bg-cyan-400/12 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-48 -left-32 h-[480px] w-[480px] rounded-full bg-blue-500/10 blur-3xl" />
 
-      <div className="page-shell relative grid min-h-[750px] items-center gap-16 py-24 lg:grid-cols-[1.08fr_.92fr] lg:py-28">
+      <div className="page-shell relative grid min-h-[700px] items-center gap-14 pb-20 pt-32 lg:grid-cols-[1.08fr_.92fr] lg:py-28">
         {/* Contenido principal */}
         <div className="max-w-[680px]">
           <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/[0.06] px-4 py-2 text-xs font-semibold tracking-[0.13em] text-cyan-200 uppercase backdrop-blur">
@@ -65,7 +65,7 @@ export default function Hero() {
             Representación comercial B2B · Argentina
           </div>
 
-          <h1 className="text-[clamp(3rem,6vw,5.35rem)] leading-[0.98] font-semibold tracking-[-0.06em] text-white">
+          <h1 className="text-[clamp(2.75rem,5vw,4.5rem)] leading-[1.02] font-semibold tracking-[-0.055em] text-white">
             Convertimos soluciones de valor en{" "}
             <span className="bg-gradient-to-r from-[#37cbd5] to-[#70e4e9] bg-clip-text text-transparent">
               oportunidades comerciales.
