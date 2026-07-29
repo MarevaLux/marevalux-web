@@ -23,9 +23,10 @@ html {
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 90%;
+  body {
+    zoom: 0.9;
   }
+
 }
 }
 
