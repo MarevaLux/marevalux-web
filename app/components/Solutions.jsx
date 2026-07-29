@@ -77,11 +77,11 @@ export default function Solutions() {
               </h3>
 
               <p className="mt-5 text-lg leading-8 text-slate-600">
-                <p className="mt-5 text-lg leading-8 text-slate-600">
   VentasXMayor es un software comercial para mayoristas, fabricantes,
   importadores y distribuidores. Integra e-commerce B2B, gestión de
   clientes, pedidos y vendedores en una sola plataforma.
 </p>
+
 <div className="mt-6 flex flex-wrap gap-2">
   {["Software B2B", "E-commerce mayorista", "Gestión CRM"].map((item) => (
     <span
@@ -91,8 +91,7 @@ export default function Solutions() {
       {item}
     </span>
   ))}
-</div>
-              </p>
+</div> 
 
               <div className="mt-8 rounded-[24px] border border-white bg-white/85 p-5 shadow-[0_16px_45px_rgba(7,26,47,.08)] backdrop-blur">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-4">
