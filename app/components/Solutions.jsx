@@ -97,7 +97,7 @@ export default function Solutions() {
                 <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                   <div>
                     <p className="text-sm font-bold text-[#071a2f]">
-                      Canal comercial mayorista
+                      Canal comercinal mayorista
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       Organización y venta desde un solo lugar
@@ -163,9 +163,8 @@ export default function Solutions() {
               </h3>
 
               <p className="mt-5 text-lg leading-8 text-slate-300">
-                Desarrollamos un sistema para servicios de cadetería que
-                interpreta pedidos, calcula tarifas, asigna cadetes y registra
-                entregas desde WhatsApp.
+                Desarrollamos sistemas que interpretan solicitudes, calculan tarifas,
+                 asignan personal operativo y registran cada servicio desde WhatsApp.
               </p>
 
               <div className="mt-8 grid gap-3 border-t border-white/10 pt-7 sm:grid-cols-2">
