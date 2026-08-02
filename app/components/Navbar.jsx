@@ -10,6 +10,7 @@ const links = [
   ["Servicios", "#servicios"],
   ["Diferencial", "#diferencial"],
   ["Proceso", "#proceso"],
+  ["Equipo", "/equipo"],
 ];
 
 export default function Navbar() {
