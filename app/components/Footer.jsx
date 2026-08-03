@@ -2,11 +2,11 @@ import { ArrowUpRight, Globe2, Mail, MapPin } from "lucide-react";
 import Brand from "./Brand";
 
 const navigation = [
-  ["Nosotros", "#nosotros"],
-  ["Empresas", "#empresas"],
-  ["Servicios", "#servicios"],
-  ["Diferencial", "#diferencial"],
-  ["Proceso", "#proceso"],
+  ["Nosotros", "/#nosotros"],
+  ["Empresas", "/#empresas"],
+  ["Servicios", "/#servicios"],
+  ["Impacto", "/#impacto"],
+  ["Oportunidades", "/oportunidades"],
 ];
 
 export default function Footer() {

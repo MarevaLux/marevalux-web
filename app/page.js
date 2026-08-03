@@ -6,6 +6,7 @@ import Services from "./components/Services";
 import Solutions from "./components/Solutions";
 import WhyChoose from "./components/WhyChoose";
 import Process from "./components/Process";
+import Impact from "./components/Impact";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
 
@@ -20,6 +21,7 @@ export default function Home() {
       <Solutions />
       <WhyChoose />
       <Process />
+      <Impact />
       <Contact />
       <Footer />
     </main>
