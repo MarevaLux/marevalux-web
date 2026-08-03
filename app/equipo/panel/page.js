@@ -42,8 +42,9 @@ const modules = [
     number: "02",
     title: "Problemas que resuelve",
     description: "Identificá los procesos desordenados y las oportunidades de digitalización.",
-    status: "Próximamente",
+    status: "Disponible",
     Icon: Target,
+    href: "/equipo/panel/ventasxmayor/problemas",
   },
   {
     number: "03",
@@ -141,7 +142,7 @@ export default function TrainingPanelPage() {
               <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:w-[300px]">
                 <div className="flex items-center justify-between"><span className="text-sm font-semibold text-[#071a2f]">Progreso</span><span className="text-sm font-bold text-[#0896a5]">0%</span></div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100" />
-                <p className="mt-3 text-xs text-slate-500">La primera lección ya está disponible.</p>
+                <p className="mt-3 text-xs text-slate-500">Las primeras dos lecciones ya están disponibles.</p>
               </div>
             </div>
 

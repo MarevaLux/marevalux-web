@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  ArrowRight,
   BookOpenCheck,
   Building2,
   CheckCircle2,
@@ -88,7 +89,7 @@ export default function QueEsVentasXMayorPage() {
 
           <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-7 sm:flex-row sm:items-center sm:justify-between">
             <Link href="/equipo/panel" className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-cyan-200 hover:text-[#077f8c]"><ArrowLeft size={17} />Volver a la capacitación</Link>
-            <span className="rounded-xl bg-slate-200/70 px-5 py-3 text-center text-sm font-semibold text-slate-500">Módulo 02 · Próximamente</span>
+            <Link href="/equipo/panel/ventasxmayor/problemas" className="flex items-center justify-center gap-2 rounded-xl bg-[#071a2f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#18b8c6] hover:text-[#071a2f]">Continuar al módulo 02<ArrowRight size={17} /></Link>
           </div>
         </div>
       </section>
