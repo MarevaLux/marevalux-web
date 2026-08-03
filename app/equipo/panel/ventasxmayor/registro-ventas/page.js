@@ -21,7 +21,7 @@ const requiredFields = [
   { field: "Origen", detail: "Dónde se encontró el prospecto y fecha del primer contacto." },
   { field: "Proceso actual", detail: "Cómo recibe, organiza y actualiza los pedidos mayoristas." },
   { field: "Problemas detectados", detail: "Tareas manuales, demoras, errores o necesidades que reconoció." },
-  { field: "Encaje", detail: "Por qué VentasXMayor puede aportar valor a esa empresa." },
+  { field: "Encaje", detail: "Por qué Ventas puede aportar valor a esa empresa." },
   { field: "Estado", detail: "Situación real de la oportunidad dentro del proceso comercial." },
   { field: "Próximo paso", detail: "Acción acordada, responsable y fecha exacta de seguimiento." },
 ];
