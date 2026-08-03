@@ -66,29 +66,33 @@ const modules = [
     number: "05",
     title: "Guiones de contacto",
     description: "Prepará llamadas, mensajes iniciales y seguimientos comerciales.",
-    status: "Próximamente",
+    status: "Disponible",
     Icon: Phone,
+    href: "/equipo/panel/ventasxmayor/guiones-contacto",
   },
   {
     number: "06",
     title: "Presentación del servicio",
     description: "Explicá el valor de VentasXMayor de forma clara y profesional.",
-    status: "Próximamente",
+    status: "Disponible",
     Icon: MessageSquareText,
+    href: "/equipo/panel/ventasxmayor/presentacion-servicio",
   },
   {
     number: "07",
     title: "Objeciones y respuestas",
     description: "Respondé las preguntas frecuentes sin improvisar información.",
-    status: "Próximamente",
+    status: "Disponible",
     Icon: CircleHelp,
+    href: "/equipo/panel/ventasxmayor/objeciones-respuestas",
   },
   {
     number: "08",
     title: "Registro y comunicación de ventas",
     description: "Registrá cada oportunidad y comunicala correctamente a MarevaLux.",
-    status: "Próximamente",
+    status: "Disponible",
     Icon: PackageCheck,
+    href: "/equipo/panel/ventasxmayor/registro-ventas",
   },
 ];
 
@@ -144,7 +148,7 @@ export default function TrainingPanelPage() {
               <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:w-[300px]">
                 <div className="flex items-center justify-between"><span className="text-sm font-semibold text-[#071a2f]">Progreso</span><span className="text-sm font-bold text-[#0896a5]">0%</span></div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100" />
-                <p className="mt-3 text-xs text-slate-500">Las primeras cuatro lecciones ya están disponibles.</p>
+                <p className="mt-3 text-xs text-slate-500">Los ocho módulos de capacitación están disponibles.</p>
               </div>
             </div>
 
