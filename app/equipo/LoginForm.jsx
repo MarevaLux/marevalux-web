@@ -18,7 +18,7 @@ export default function LoginForm() {
           type="email"
           name="email"
           autoComplete="email"
-          placeholder="nombre@marevalux.com"
+          placeholder="tu-correo@empresa.com"
           className="mt-2 h-13 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-[#071a2f] outline-none transition placeholder:text-slate-400 focus:border-[#18b8c6] focus:bg-white focus:ring-4 focus:ring-cyan-100"
         />
       </label>

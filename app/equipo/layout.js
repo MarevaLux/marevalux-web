@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Acceso del equipo | MarevaLux",
-  description: "Centro privado de capacitación comercial de MarevaLux.",
+  description: "Centro privado de capacitación y gestión comercial de MarevaLux.",
   robots: { index: false, follow: false },
 };
 

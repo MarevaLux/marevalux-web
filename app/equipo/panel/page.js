@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BarChart3,
   BookOpen,
   CheckCircle2,
   ChevronRight,
@@ -22,11 +21,11 @@ import Brand from "../../components/Brand";
 import { logoutAction } from "../actions";
 
 const navigation = [
-  [Home, "Inicio", true],
-  [BookOpen, "Capacitación", false],
-  [MessageSquareText, "Guiones", false],
-  [CircleHelp, "Objeciones", false],
-  [BarChart3, "Resultados", false],
+  [Home, "Inicio", "/equipo/panel", true],
+  [Users, "Prospectos", "/equipo/panel/crm", false],
+  [BookOpen, "Capacitación", "/equipo/panel", false],
+  [MessageSquareText, "Guiones", "/equipo/panel/ventasxmayor/guiones-contacto", false],
+  [CircleHelp, "Objeciones", "/equipo/panel/ventasxmayor/objeciones-respuestas", false],
 ];
 
 const modules = [
@@ -116,10 +115,10 @@ export default function TrainingPanelPage() {
         <aside className="hidden min-h-[calc(100vh-78px)] border-r border-slate-200/80 bg-white p-5 lg:flex lg:flex-col">
           <p className="px-3 pt-2 text-[0.68rem] font-bold tracking-[0.15em] text-slate-400 uppercase">Centro comercial</p>
           <nav className="mt-4 space-y-1" aria-label="Panel comercial">
-            {navigation.map(([Icon, label, active]) => (
-              <a key={label} href="#" className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${active ? "bg-[#e9f8fa] text-[#077f8c]" : "text-slate-500 hover:bg-slate-50 hover:text-[#071a2f]"}`}>
+            {navigation.map(([Icon, label, href, active]) => (
+              <Link key={label} href={href} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${active ? "bg-[#e9f8fa] text-[#077f8c]" : "text-slate-500 hover:bg-slate-50 hover:text-[#071a2f]"}`}>
                 <Icon size={18} />{label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -195,6 +194,14 @@ export default function TrainingPanelPage() {
                       <div key={rule} className="flex gap-3 text-sm leading-5 text-slate-500"><CheckCircle2 size={17} className="mt-0.5 shrink-0 text-[#18b8c6]" />{rule}</div>
                     ))}
                   </div>
+                </div>
+
+                <div className="rounded-[22px] border border-cyan-200 bg-[#e9f8fa] p-6">
+                  <Users size={22} className="text-[#0896a5]" />
+                  <p className="mt-5 text-xs font-bold tracking-[0.14em] text-[#0896a5] uppercase">Área de trabajo</p>
+                  <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-[#071a2f]">CRM de prospectos</h2>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">Registrá contactos, próximos pasos y oportunidades dentro del circuito protegido de MarevaLux.</p>
+                  <Link href="/equipo/panel/crm" className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#071a2f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#18b8c6] hover:text-[#071a2f]">Abrir CRM<ArrowRight size={17} /></Link>
                 </div>
               </aside>
             </div>

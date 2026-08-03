@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { BookOpenCheck, Headphones, LockKeyhole, ShieldCheck } from "lucide-react";
 import Brand from "../components/Brand";
 import LoginForm from "./LoginForm";
+import { getCurrentProfile } from "./auth";
 
 const benefits = [
   [BookOpenCheck, "Capacitación clara y ordenada"],
@@ -9,7 +11,10 @@ const benefits = [
   [ShieldCheck, "Acceso personal y protegido"],
 ];
 
-export default function EquipoLoginPage() {
+export default async function EquipoLoginPage() {
+  const { profile } = await getCurrentProfile();
+  if (profile) redirect("/equipo/panel");
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#071a2f] text-white">
       <div
