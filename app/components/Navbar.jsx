@@ -67,7 +67,7 @@ export default function Navbar() {
 
           {/* Menú de escritorio */}
           <nav
-            className="hidden items-center gap-0.5 xl:flex"
+            className="hidden items-center gap-0.5 lg:flex"
             aria-label="Navegación principal"
           >
             {links.map(([label, href]) => (
@@ -84,7 +84,7 @@ export default function Navbar() {
           {/* Botón principal */}
           <a
             href="#contacto"
-            className="hidden items-center gap-2 rounded-full bg-gradient-to-r from-[#18b8c6] to-[#35d0da] px-5 py-3 text-sm font-bold text-[#071a2f] shadow-[0_12px_28px_rgba(24,184,198,.28)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(24,184,198,.38)] xl:inline-flex"
+            className="hidden items-center gap-2 rounded-full bg-gradient-to-r from-[#18b8c6] to-[#35d0da] px-5 py-3 text-sm font-bold text-[#071a2f] shadow-[0_12px_28px_rgba(24,184,198,.28)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(24,184,198,.38)] lg:inline-flex"
           >
             Agendar una reunión
             <ArrowUpRight size={16} strokeWidth={2.3} />
@@ -94,7 +94,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/[0.07] text-white transition hover:bg-white/[0.12] xl:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/[0.07] text-white transition hover:bg-white/[0.12] lg:hidden"
             aria-label={open ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={open}
           >
@@ -107,7 +107,7 @@ export default function Navbar() {
         {/* Menú móvil */}
         {open && (
           <nav
-            className="border-t border-white/[0.06] bg-[#071a2f]/98 px-4 py-4 xl:hidden"
+            className="border-t border-white/[0.06] bg-[#071a2f]/98 px-4 py-4 lg:hidden"
             aria-label="Navegación móvil"
           >
             <div className="flex flex-col gap-1">
