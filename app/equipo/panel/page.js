@@ -1,20 +1,22 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
   BarChart3,
   BookOpen,
   CheckCircle2,
   ChevronRight,
   CircleHelp,
-  Clock3,
-  Headphones,
   Home,
   LogOut,
   MessageSquareText,
+  PackageCheck,
+  Phone,
   PlayCircle,
+  Search,
   ShieldCheck,
+  Store,
   Target,
+  Users,
 } from "lucide-react";
 import Brand from "../../components/Brand";
 import { logoutAction } from "../actions";
@@ -28,10 +30,63 @@ const navigation = [
 ];
 
 const modules = [
-  ["01", "Conocé MarevaLux", "Nuestra misión, forma de trabajo y responsabilidad comercial.", "15 min", "Disponible", BadgeCheck, true],
-  ["02", "Dominá VentasXMayor", "Qué problema resuelve, para quién sirve y cómo explicarlo.", "35 min", "Siguiente", Target, false],
-  ["03", "Prepará la primera llamada", "Apertura, preguntas de diagnóstico y calificación del prospecto.", "30 min", "Bloqueado", Headphones, false],
-  ["04", "Objeciones y seguimiento", "Cómo responder con criterio y mantener vivo cada contacto.", "40 min", "Bloqueado", MessageSquareText, false],
+  {
+    number: "01",
+    title: "¿Qué es VentasXMayor?",
+    description: "Comprendé la plataforma, su función y la forma correcta de explicarla.",
+    status: "Disponible",
+    Icon: Store,
+    href: "/equipo/panel/ventasxmayor/que-es",
+  },
+  {
+    number: "02",
+    title: "Problemas que resuelve",
+    description: "Identificá los procesos desordenados y las oportunidades de digitalización.",
+    status: "Próximamente",
+    Icon: Target,
+  },
+  {
+    number: "03",
+    title: "Cliente ideal",
+    description: "Reconocé qué fabricantes, mayoristas y distribuidores tienen mejor encaje.",
+    status: "Próximamente",
+    Icon: Users,
+  },
+  {
+    number: "04",
+    title: "Preguntas de diagnóstico",
+    description: "Detectá necesidades reales antes de presentar la solución.",
+    status: "Próximamente",
+    Icon: Search,
+  },
+  {
+    number: "05",
+    title: "Guiones de contacto",
+    description: "Prepará llamadas, mensajes iniciales y seguimientos comerciales.",
+    status: "Próximamente",
+    Icon: Phone,
+  },
+  {
+    number: "06",
+    title: "Presentación del servicio",
+    description: "Explicá el valor de VentasXMayor de forma clara y profesional.",
+    status: "Próximamente",
+    Icon: MessageSquareText,
+  },
+  {
+    number: "07",
+    title: "Objeciones y respuestas",
+    description: "Respondé las preguntas frecuentes sin improvisar información.",
+    status: "Próximamente",
+    Icon: CircleHelp,
+  },
+  {
+    number: "08",
+    title: "Registro y comunicación de ventas",
+    description: "Registrá cada oportunidad y comunicala correctamente a MarevaLux.",
+    status: "Próximamente",
+    Icon: PackageCheck,
+  },
 ];
 
 export default function TrainingPanelPage() {
@@ -79,31 +134,39 @@ export default function TrainingPanelPage() {
           <div className="mx-auto max-w-[1120px]">
             <div className="flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-[720px]">
-                <p className="text-xs font-bold tracking-[0.16em] text-[#0896a5] uppercase">Programa inicial · VentasXMayor</p>
-                <h1 className="mt-4 text-[clamp(2.2rem,4vw,3.65rem)] leading-[1.02] font-semibold tracking-[-0.05em] text-[#071a2f]">Tu capacitación comercial empieza acá.</h1>
-                <p className="mt-5 max-w-[670px] text-base leading-7 text-slate-600">Avanzá módulo por módulo. Antes de contactar clientes vas a practicar cómo presentar la solución y responder las preguntas principales.</p>
+                <p className="text-xs font-bold tracking-[0.16em] text-[#0896a5] uppercase">Capacitación específica · VentasXMayor</p>
+                <h1 className="mt-4 text-[clamp(2.2rem,4vw,3.65rem)] leading-[1.02] font-semibold tracking-[-0.05em] text-[#071a2f]">Preparación comercial para representar VentasXMayor.</h1>
+                <p className="mt-5 max-w-[670px] text-base leading-7 text-slate-600">Esta capacitación está diseñada para vendedores con experiencia. Reúne únicamente la información necesaria para comprender la solución y comenzar a prospectar con seguridad.</p>
               </div>
               <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:w-[300px]">
-                <div className="flex items-center justify-between"><span className="text-sm font-semibold text-[#071a2f]">Progreso inicial</span><span className="text-sm font-bold text-[#0896a5]">0%</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm font-semibold text-[#071a2f]">Progreso</span><span className="text-sm font-bold text-[#0896a5]">0%</span></div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100" />
-                <p className="mt-3 text-xs text-slate-500">Completá el primer módulo para avanzar.</p>
+                <p className="mt-3 text-xs text-slate-500">La primera lección ya está disponible.</p>
               </div>
             </div>
 
             <div className="mt-10 grid gap-6 xl:grid-cols-[1fr_320px]">
               <div>
-                <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold tracking-[-0.02em] text-[#071a2f]">Ruta de capacitación</h2><span className="text-xs font-semibold text-slate-400">4 módulos</span></div>
+                <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold tracking-[-0.02em] text-[#071a2f]">Capacitación VentasXMayor</h2><span className="text-xs font-semibold text-slate-400">8 módulos</span></div>
                 <div className="space-y-3">
-                  {modules.map(([number, title, description, time, status, Icon, active]) => (
-                    <article key={number} className={`group grid gap-4 rounded-2xl border bg-white p-5 transition sm:grid-cols-[48px_1fr_auto] sm:items-center ${active ? "border-cyan-200 shadow-[0_14px_36px_rgba(7,26,47,.07)]" : "border-slate-200/90"}`}>
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${active ? "bg-[#18b8c6] text-[#071a2f]" : "bg-slate-100 text-slate-400"}`}><Icon size={21} /></div>
+                  {modules.map(({ number, title, description, status, Icon, href }) => (
+                    <article key={number} className={`group grid gap-4 rounded-2xl border bg-white p-5 transition sm:grid-cols-[48px_1fr_auto] sm:items-center ${href ? "border-cyan-200 shadow-[0_14px_36px_rgba(7,26,47,.07)]" : "border-slate-200/90"}`}>
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${href ? "bg-[#18b8c6] text-[#071a2f]" : "bg-slate-100 text-slate-400"}`}><Icon size={21} /></div>
                       <div>
-                        <div className="flex flex-wrap items-center gap-2"><span className="text-[0.66rem] font-bold tracking-[0.14em] text-slate-400 uppercase">Módulo {number}</span><span className={`rounded-full px-2.5 py-1 text-[0.65rem] font-bold ${active ? "bg-cyan-50 text-[#077f8c]" : "bg-slate-100 text-slate-400"}`}>{status}</span></div>
+                        <div className="flex flex-wrap items-center gap-2"><span className="text-[0.66rem] font-bold tracking-[0.14em] text-slate-400 uppercase">Módulo {number}</span><span className={`rounded-full px-2.5 py-1 text-[0.65rem] font-bold ${href ? "bg-cyan-50 text-[#077f8c]" : "bg-slate-100 text-slate-400"}`}>{status}</span></div>
                         <h3 className="mt-2 font-semibold text-[#071a2f]">{title}</h3>
                         <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
-                        <div className="mt-3 flex items-center gap-2 text-xs text-slate-400 sm:hidden"><Clock3 size={14} />{time}</div>
                       </div>
-                      <div className="hidden items-center gap-5 sm:flex"><span className="flex items-center gap-2 whitespace-nowrap text-xs text-slate-400"><Clock3 size={14} />{time}</span><button aria-label={`Abrir ${title}`} className={`flex h-10 w-10 items-center justify-center rounded-full transition ${active ? "bg-[#071a2f] text-white group-hover:bg-[#18b8c6] group-hover:text-[#071a2f]" : "bg-slate-100 text-slate-400"}`}><ChevronRight size={18} /></button></div>
+                      <div className="hidden items-center sm:flex">
+                        {href ? (
+                          <Link href={href} aria-label={`Abrir ${title}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#071a2f] text-white transition group-hover:bg-[#18b8c6] group-hover:text-[#071a2f]"><ChevronRight size={18} /></Link>
+                        ) : (
+                          <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400"><ChevronRight size={18} /></span>
+                        )}
+                      </div>
+                      {href && (
+                        <Link href={href} className="flex items-center justify-center gap-2 rounded-xl bg-[#071a2f] px-4 py-3 text-sm font-bold text-white sm:hidden">Abrir lección<ChevronRight size={17} /></Link>
+                      )}
                     </article>
                   ))}
                 </div>
@@ -113,9 +176,9 @@ export default function TrainingPanelPage() {
                 <div className="rounded-[22px] bg-[#071a2f] p-6 text-white shadow-[0_20px_50px_rgba(7,26,47,.16)]">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-cyan-300"><PlayCircle size={22} /></div>
                   <p className="mt-6 text-xs font-bold tracking-[0.14em] text-cyan-200 uppercase">Primer paso</p>
-                  <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">Empezá por conocer MarevaLux</h2>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">Comprendé qué representamos y cómo cuidamos cada oportunidad comercial.</p>
-                  <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18b8c6] px-4 py-3 text-sm font-bold text-[#071a2f] transition hover:bg-[#37cbd5]">Comenzar módulo<ArrowRight size={17} /></button>
+                  <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">¿Qué es VentasXMayor?</h2>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">Comprendé qué es la plataforma y cómo explicarla sin confundirla con una página web tradicional.</p>
+                  <Link href="/equipo/panel/ventasxmayor/que-es" className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18b8c6] px-4 py-3 text-sm font-bold text-[#071a2f] transition hover:bg-[#37cbd5]">Comenzar módulo<ArrowRight size={17} /></Link>
                 </div>
 
                 <div className="rounded-[22px] border border-slate-200 bg-white p-6">
