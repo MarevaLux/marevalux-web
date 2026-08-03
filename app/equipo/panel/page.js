@@ -50,15 +50,17 @@ const modules = [
     number: "03",
     title: "Cliente ideal",
     description: "Reconocé qué fabricantes, mayoristas y distribuidores tienen mejor encaje.",
-    status: "Próximamente",
+    status: "Disponible",
     Icon: Users,
+    href: "/equipo/panel/ventasxmayor/cliente-ideal",
   },
   {
     number: "04",
     title: "Preguntas de diagnóstico",
     description: "Detectá necesidades reales antes de presentar la solución.",
-    status: "Próximamente",
+    status: "Disponible",
     Icon: Search,
+    href: "/equipo/panel/ventasxmayor/preguntas-diagnostico",
   },
   {
     number: "05",
@@ -142,7 +144,7 @@ export default function TrainingPanelPage() {
               <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:w-[300px]">
                 <div className="flex items-center justify-between"><span className="text-sm font-semibold text-[#071a2f]">Progreso</span><span className="text-sm font-bold text-[#0896a5]">0%</span></div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100" />
-                <p className="mt-3 text-xs text-slate-500">Las primeras dos lecciones ya están disponibles.</p>
+                <p className="mt-3 text-xs text-slate-500">Las primeras cuatro lecciones ya están disponibles.</p>
               </div>
             </div>
 
