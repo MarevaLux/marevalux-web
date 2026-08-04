@@ -101,7 +101,7 @@ function randomIndex(length, current) {
 
 export default function PracticeClient({ profile }) {
   const supabase = useMemo(() => createClient(), []);
-  const progressKey = `marevalux-practice-progress-${profile.id}`;
+  const legacyProgressKey = `marevalux-practice-progress-${profile.id}`;
 
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [callRunning, setCallRunning] = useState(false);
@@ -116,6 +116,7 @@ export default function PracticeClient({ profile }) {
   const [objectionScore, setObjectionScore] = useState(0);
 
   const [progress, setProgress] = useState(emptyProgress);
+  const [progressLoaded, setProgressLoaded] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(true);
 
@@ -123,6 +124,8 @@ export default function PracticeClient({ profile }) {
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioUrl, setAudioUrl] = useState("");
+  const [draftSubmission, setDraftSubmission] = useState(null);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [notes, setNotes] = useState("");
   const [exerciseType, setExerciseType] = useState("llamada");
   const [sending, setSending] = useState(false);
@@ -131,19 +134,24 @@ export default function PracticeClient({ profile }) {
   const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const chunksRef = useRef([]);
+  const recordingStartedAtRef = useRef(0);
+  const objectAudioUrlRef = useRef("");
+  const restoredDraftRef = useRef(false);
 
-  useEffect(() => {
-    try {
-      const stored = JSON.parse(window.localStorage.getItem(progressKey) || "null");
-      if (stored) setProgress({ ...emptyProgress, ...stored });
-    } catch {
-      setProgress(emptyProgress);
+  function clearObjectAudioUrl() {
+    if (objectAudioUrlRef.current) {
+      URL.revokeObjectURL(objectAudioUrlRef.current);
+      objectAudioUrlRef.current = "";
     }
-  }, [progressKey]);
+  }
 
-  useEffect(() => {
-    window.localStorage.setItem(progressKey, JSON.stringify(progress));
-  }, [progress, progressKey]);
+  function showLocalAudio(blob) {
+    clearObjectAudioUrl();
+    const nextUrl = URL.createObjectURL(blob);
+    objectAudioUrlRef.current = nextUrl;
+    setAudioUrl(nextUrl);
+    return nextUrl;
+  }
 
   useEffect(() => {
     if (!callRunning) return undefined;
@@ -159,32 +167,158 @@ export default function PracticeClient({ profile }) {
 
   useEffect(() => {
     return () => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      clearObjectAudioUrl();
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [audioUrl]);
+  }, []);
 
-  async function loadSubmissions() {
+  function progressFromRow(row) {
+    if (!row) return null;
+    return {
+      callAttempts: Number(row.call_attempts || 0),
+      objectionAttempts: Number(row.objection_attempts || 0),
+      audioSubmissions: Number(row.audio_submissions || 0),
+      bestScore: Number(row.best_score || 0),
+      lastScore: Number(row.last_score || 0),
+    };
+  }
+
+  function progressPayload(value) {
+    return {
+      user_id: profile.id,
+      call_attempts: Number(value.callAttempts || 0),
+      objection_attempts: Number(value.objectionAttempts || 0),
+      audio_submissions: Number(value.audioSubmissions || 0),
+      best_score: Number(value.bestScore || 0),
+      last_score: Number(value.lastScore || 0),
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  async function persistProgress(nextProgress, showError = true) {
+    setProgress(nextProgress);
+    try {
+      window.localStorage.setItem(legacyProgressKey, JSON.stringify(nextProgress));
+    } catch {
+      // Supabase continúa siendo la fuente principal aunque localStorage no esté disponible.
+    }
+
+    const { error } = await supabase
+      .from("practice_progress")
+      .upsert(progressPayload(nextProgress), { onConflict: "user_id" });
+
+    if (error && showError) {
+      setMessage({
+        type: "error",
+        text: "El resultado quedó visible en este navegador, pero no pudo sincronizarse con Supabase. Ejecutá el SQL de persistencia antes de continuar.",
+      });
+    }
+    return !error;
+  }
+
+  async function loadProgress() {
+    let legacy = null;
+    try {
+      legacy = JSON.parse(window.localStorage.getItem(legacyProgressKey) || "null");
+    } catch {
+      legacy = null;
+    }
+
+    const { data, error } = await supabase
+      .from("practice_progress")
+      .select("call_attempts, objection_attempts, audio_submissions, best_score, last_score")
+      .eq("user_id", profile.id)
+      .maybeSingle();
+
+    const databaseProgress = progressFromRow(data) || emptyProgress;
+    const legacyProgress = legacy ? { ...emptyProgress, ...legacy } : emptyProgress;
+    const merged = {
+      callAttempts: Math.max(databaseProgress.callAttempts, Number(legacyProgress.callAttempts || 0)),
+      objectionAttempts: Math.max(databaseProgress.objectionAttempts, Number(legacyProgress.objectionAttempts || 0)),
+      audioSubmissions: Math.max(databaseProgress.audioSubmissions, Number(legacyProgress.audioSubmissions || 0)),
+      bestScore: Math.max(databaseProgress.bestScore, Number(legacyProgress.bestScore || 0)),
+      lastScore: databaseProgress.lastScore || Number(legacyProgress.lastScore || 0),
+    };
+
+    setProgress(merged);
+    setProgressLoaded(true);
+
+    if (!error) {
+      await persistProgress(merged, false);
+    } else if (error.code !== "PGRST116") {
+      setMessage({
+        type: "error",
+        text: "No se pudo cargar el progreso desde Supabase. Ejecutá el nuevo SQL de persistencia para evitar pérdidas al recargar.",
+      });
+    }
+  }
+
+  async function loadSubmissions(restoreLatestDraft = true) {
     setLoadingSubmissions(true);
     const { data, error } = await supabase
       .from("practice_submissions")
-      .select("id, exercise_type, score, duration_seconds, notes, created_at")
+      .select("id, exercise_type, score, duration_seconds, notes, audio_path, status, created_at, updated_at")
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(20);
 
-    if (!error) {
-      setSubmissions(data || []);
-      setProgress((current) => ({
-        ...current,
-        audioSubmissions: Math.max(current.audioSubmissions, data?.length || 0),
-      }));
+    if (error) {
+      setLoadingSubmissions(false);
+      return;
     }
+
+    const rows = data || [];
+    const paths = rows.map((item) => item.audio_path).filter(Boolean);
+    let signedByPath = new Map();
+
+    if (paths.length) {
+      const { data: signedData } = await supabase.storage
+        .from("practice-audios")
+        .createSignedUrls(paths, 60 * 60);
+      signedByPath = new Map(
+        (signedData || [])
+          .filter((item) => item?.path && item?.signedUrl)
+          .map((item) => [item.path, item.signedUrl]),
+      );
+    }
+
+    const enriched = rows.map((item) => ({
+      ...item,
+      status: item.status || "submitted",
+      audio_url: signedByPath.get(item.audio_path) || "",
+    }));
+    setSubmissions(enriched);
+
+    const submittedCount = enriched.filter((item) => item.status === "submitted").length;
+    setProgress((current) => ({
+      ...current,
+      audioSubmissions: Math.max(current.audioSubmissions, submittedCount),
+    }));
+
+    if (restoreLatestDraft && !restoredDraftRef.current) {
+      restoredDraftRef.current = true;
+      const latestDraft = enriched.find((item) => item.status === "draft" && item.audio_url);
+      if (latestDraft) {
+        clearObjectAudioUrl();
+        setDraftSubmission(latestDraft);
+        setAudioBlob(null);
+        setAudioUrl(latestDraft.audio_url);
+        setRecordSeconds(Number(latestDraft.duration_seconds || 0));
+        setNotes(latestDraft.notes || "");
+        setExerciseType(latestDraft.exercise_type || "llamada");
+        setMessage({ type: "info", text: "Recuperamos automáticamente la última grabación que todavía no habías entregado." });
+      }
+    }
+
     setLoadingSubmissions(false);
   }
 
   useEffect(() => {
-    loadSubmissions();
+    async function initializePractice() {
+      await loadProgress();
+      await loadSubmissions(true);
+    }
+    initializePractice();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -196,33 +330,35 @@ export default function PracticeClient({ profile }) {
     if (nextScenario) setScenarioIndex((current) => randomIndex(scenarios.length, current));
   }
 
-  function finishCall() {
+  async function finishCall() {
     if (!callRunning && callSeconds === 0) return;
     setCallRunning(false);
     const completed = Object.values(callChecks).filter(Boolean).length;
     const timePoints = callSeconds >= 45 && callSeconds <= 180 ? 28 : callSeconds >= 25 ? 18 : 8;
     const score = Math.min(100, completed * 18 + timePoints);
     setCallScore(score);
-    setProgress((current) => ({
-      ...current,
-      callAttempts: current.callAttempts + 1,
+    const nextProgress = {
+      ...progress,
+      callAttempts: progress.callAttempts + 1,
       lastScore: score,
-      bestScore: Math.max(current.bestScore, score),
-    }));
+      bestScore: Math.max(progress.bestScore, score),
+    };
+    await persistProgress(nextProgress);
   }
 
-  function evaluateObjection() {
+  async function evaluateObjection() {
     const completed = Object.values(objectionChecks).filter(Boolean).length;
     const lengthPoints = objectionAnswer.trim().length >= 80 ? 24 : objectionAnswer.trim().length >= 35 ? 14 : 5;
     const score = Math.min(100, completed * 19 + lengthPoints);
     setObjectionScore(score);
     setShowGuide(true);
-    setProgress((current) => ({
-      ...current,
-      objectionAttempts: current.objectionAttempts + 1,
+    const nextProgress = {
+      ...progress,
+      objectionAttempts: progress.objectionAttempts + 1,
       lastScore: score,
-      bestScore: Math.max(current.bestScore, score),
-    }));
+      bestScore: Math.max(progress.bestScore, score),
+    };
+    await persistProgress(nextProgress);
   }
 
   function nextObjection() {
@@ -233,6 +369,70 @@ export default function PracticeClient({ profile }) {
     setObjectionChecks({ validate: false, question: false, clarity: false, nextStep: false });
   }
 
+  async function saveRecordingDraft(blob, duration, localUrl) {
+    setSavingDraft(true);
+    setMessage({ type: "info", text: "Guardando la grabación automáticamente..." });
+
+    const extension = blob.type.includes("ogg") ? "ogg" : "webm";
+    const uniqueId = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const filePath = `${profile.id}/draft-${Date.now()}-${uniqueId}.${extension}`;
+    const score = exerciseType === "llamada"
+      ? callScore || progress.lastScore
+      : objectionScore || progress.lastScore;
+
+    const { error: uploadError } = await supabase.storage
+      .from("practice-audios")
+      .upload(filePath, blob, {
+        contentType: extension === "ogg" ? "audio/ogg" : "audio/webm",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      setSavingDraft(false);
+      setMessage({
+        type: "error",
+        text: "La grabación puede escucharse ahora, pero no se guardó en Supabase. No recargues la página y ejecutá el SQL de persistencia.",
+      });
+      return;
+    }
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("practice_submissions")
+      .insert({
+        user_id: profile.id,
+        exercise_type: exerciseType,
+        score: Number(score || 0),
+        duration_seconds: duration,
+        notes: notes.trim() || null,
+        audio_path: filePath,
+        status: "draft",
+        updated_at: new Date().toISOString(),
+      })
+      .select("id, exercise_type, score, duration_seconds, notes, audio_path, status, created_at, updated_at")
+      .single();
+
+    if (insertError) {
+      await supabase.storage.from("practice-audios").remove([filePath]);
+      setSavingDraft(false);
+      setMessage({
+        type: "error",
+        text: "La grabación puede escucharse ahora, pero no se pudo registrar como borrador. No recargues y revisá el SQL de Supabase.",
+      });
+      return;
+    }
+
+    const draft = { ...inserted, audio_url: localUrl };
+    setDraftSubmission(draft);
+    setSubmissions((current) => [draft, ...current.filter((item) => item.id !== draft.id)]);
+    setSavingDraft(false);
+    setMessage({
+      type: "success",
+      text: "Grabación guardada automáticamente. Podés recargar la página sin perderla.",
+    });
+  }
+
   async function startRecording() {
     setMessage({ type: "", text: "" });
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
@@ -241,9 +441,10 @@ export default function PracticeClient({ profile }) {
     }
 
     try {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      clearObjectAudioUrl();
       setAudioBlob(null);
       setAudioUrl("");
+      setDraftSubmission(null);
       setRecordSeconds(0);
       chunksRef.current = [];
 
@@ -254,20 +455,26 @@ export default function PracticeClient({ profile }) {
         : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
           ? "audio/ogg;codecs=opus"
           : "";
-      const recorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
+      const recorder = preferredType
+        ? new MediaRecorder(stream, { mimeType: preferredType })
+        : new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
+      recordingStartedAtRef.current = Date.now();
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const type = recorder.mimeType || "audio/webm";
         const blob = new Blob(chunksRef.current, { type });
+        const duration = Math.max(1, Math.round((Date.now() - recordingStartedAtRef.current) / 1000));
+        setRecordSeconds(duration);
         setAudioBlob(blob);
-        setAudioUrl(URL.createObjectURL(blob));
+        const localUrl = showLocalAudio(blob);
         mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
         mediaStreamRef.current = null;
+        await saveRecordingDraft(blob, duration, localUrl);
       };
 
       recorder.start();
@@ -283,64 +490,116 @@ export default function PracticeClient({ profile }) {
   }
 
   async function submitAudio() {
-    if (!audioBlob) {
+    if (!audioBlob && !draftSubmission) {
       setMessage({ type: "error", text: "Primero grabá un audio para poder entregarlo." });
+      return;
+    }
+
+    if (savingDraft) {
+      setMessage({ type: "info", text: "Esperá unos segundos mientras terminamos de guardar la grabación." });
       return;
     }
 
     setSending(true);
     setMessage({ type: "", text: "" });
+    const score = exerciseType === "llamada"
+      ? callScore || progress.lastScore
+      : objectionScore || progress.lastScore;
 
-    const extension = audioBlob.type.includes("ogg") ? "ogg" : "webm";
-    const uniqueId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const filePath = `${profile.id}/${Date.now()}-${uniqueId}.${extension}`;
-    const score = exerciseType === "llamada" ? callScore || progress.lastScore : objectionScore || progress.lastScore;
+    let submissionId = draftSubmission?.id || null;
+    let filePath = draftSubmission?.audio_path || null;
 
-    const { error: uploadError } = await supabase.storage
-      .from("practice-audios")
-      .upload(filePath, audioBlob, { contentType: extension === "ogg" ? "audio/ogg" : "audio/webm", upsert: false });
+    if (!submissionId && audioBlob) {
+      const extension = audioBlob.type.includes("ogg") ? "ogg" : "webm";
+      const uniqueId = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      filePath = `${profile.id}/${Date.now()}-${uniqueId}.${extension}`;
 
-    if (uploadError) {
-      setSending(false);
-      setMessage({ type: "error", text: "No se pudo entregar el audio. Verificá que se haya ejecutado el archivo supabase/practica.sql." });
-      return;
+      const { error: uploadError } = await supabase.storage
+        .from("practice-audios")
+        .upload(filePath, audioBlob, {
+          contentType: extension === "ogg" ? "audio/ogg" : "audio/webm",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setSending(false);
+        setMessage({ type: "error", text: "No se pudo entregar el audio. Revisá la configuración de Supabase." });
+        return;
+      }
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("practice_submissions")
+        .insert({
+          user_id: profile.id,
+          exercise_type: exerciseType,
+          score: Number(score || 0),
+          duration_seconds: recordSeconds,
+          notes: notes.trim() || null,
+          audio_path: filePath,
+          status: "submitted",
+          updated_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (insertError) {
+        await supabase.storage.from("practice-audios").remove([filePath]);
+        setSending(false);
+        setMessage({ type: "error", text: "El audio se subió, pero no pudo registrarse la entrega." });
+        return;
+      }
+      submissionId = inserted.id;
+    } else {
+      const { error: updateError } = await supabase
+        .from("practice_submissions")
+        .update({
+          exercise_type: exerciseType,
+          score: Number(score || 0),
+          duration_seconds: recordSeconds,
+          notes: notes.trim() || null,
+          status: "submitted",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", submissionId)
+        .eq("user_id", profile.id);
+
+      if (updateError) {
+        setSending(false);
+        setMessage({ type: "error", text: "La grabación sigue guardada como borrador, pero no pudo marcarse como entregada." });
+        return;
+      }
     }
 
-    const { error: insertError } = await supabase.from("practice_submissions").insert({
-      user_id: profile.id,
-      exercise_type: exerciseType,
-      score: Number(score || 0),
-      duration_seconds: recordSeconds,
-      notes: notes.trim() || null,
-      audio_path: filePath,
-    });
+    const nextProgress = {
+      ...progress,
+      audioSubmissions: progress.audioSubmissions + 1,
+      bestScore: Math.max(progress.bestScore, Number(score || 0)),
+      lastScore: Number(score || progress.lastScore || 0),
+    };
+    await persistProgress(nextProgress, false);
 
-    if (insertError) {
-      await supabase.storage.from("practice-audios").remove([filePath]);
-      setSending(false);
-      setMessage({ type: "error", text: "El audio se grabó, pero no pudo registrarse la entrega. Revisá la configuración de Supabase." });
-      return;
-    }
-
-    setProgress((current) => ({ ...current, audioSubmissions: current.audioSubmissions + 1 }));
-    setMessage({ type: "success", text: "Audio entregado correctamente. Ya quedó registrado en tu progreso." });
+    setMessage({ type: "success", text: "Audio entregado correctamente. Quedó guardado en Supabase y seguirá disponible después de recargar." });
     setNotes("");
     setAudioBlob(null);
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setDraftSubmission(null);
+    clearObjectAudioUrl();
     setAudioUrl("");
     setRecordSeconds(0);
-    await loadSubmissions();
+    await loadSubmissions(false);
     setSending(false);
   }
 
-  const averageScore = submissions.length
-    ? Math.round(submissions.reduce((sum, item) => sum + Number(item.score || 0), 0) / submissions.length)
+  const submittedSubmissions = submissions.filter((item) => item.status === "submitted");
+  const averageScore = submittedSubmissions.length
+    ? Math.round(submittedSubmissions.reduce((sum, item) => sum + Number(item.score || 0), 0) / submittedSubmissions.length)
     : progress.lastScore;
 
   const progressGoals = [
     { label: "Realizar 3 simulaciones", current: progress.callAttempts, target: 3 },
     { label: "Resolver 5 objeciones", current: progress.objectionAttempts, target: 5 },
-    { label: "Entregar 1 audio", current: Math.max(progress.audioSubmissions, submissions.length), target: 1 },
+    { label: "Entregar 1 audio", current: Math.max(progress.audioSubmissions, submittedSubmissions.length), target: 1 },
     { label: "Alcanzar 70 puntos", current: Math.max(progress.bestScore, averageScore), target: 70 },
   ];
   const totalProgress = Math.round(
@@ -349,6 +608,9 @@ export default function PracticeClient({ profile }) {
 
   const currentScenario = scenarios[scenarioIndex];
   const currentObjection = objections[objectionIndex];
+  const audioExtension = audioBlob?.type.includes("ogg")
+    ? "ogg"
+    : draftSubmission?.audio_path?.split(".").pop() || "webm";
 
   return (
     <div className="mx-auto max-w-[1120px]">
@@ -362,7 +624,7 @@ export default function PracticeClient({ profile }) {
           <div className="flex items-center justify-between"><span className="text-sm font-semibold">Progreso general</span><Trophy size={20} className="text-cyan-300" /></div>
           <p className="mt-5 text-4xl font-semibold tracking-[-0.05em]">{totalProgress}%</p>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-[#18b8c6] transition-all" style={{ width: `${totalProgress}%` }} /></div>
-          <p className="mt-4 text-xs leading-5 text-slate-400">Mejor puntaje: <strong className="text-white">{progress.bestScore}/100</strong></p>
+          <p className="mt-4 text-xs leading-5 text-slate-400">{progressLoaded ? <>Mejor puntaje: <strong className="text-white">{progress.bestScore}/100</strong></> : "Cargando progreso guardado..."}</p>
         </div>
       </div>
 
@@ -439,15 +701,15 @@ export default function PracticeClient({ profile }) {
               <span className={`rounded-xl px-4 py-3 font-mono text-sm font-semibold ${recording ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-600"}`}>{recording ? "Grabando " : "Duración "}{formatTime(recordSeconds)}</span>
             </div>
 
-            {audioUrl && <div className="mt-5 rounded-2xl border border-violet-100 bg-violet-50 p-5"><div className="flex items-center gap-3"><Headphones size={20} className="text-violet-600" /><p className="text-sm font-semibold text-[#071a2f]">Escuchá tu grabación antes de entregarla</p></div><audio controls src={audioUrl} className="mt-4 w-full" /><a href={audioUrl} download={`practica-${profile.full_name.replaceAll(" ", "-").toLowerCase()}.${audioBlob?.type.includes("ogg") ? "ogg" : "webm"}`} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-violet-700"><Download size={17} />Descargar copia</a></div>}
+            {audioUrl && <div className="mt-5 rounded-2xl border border-violet-100 bg-violet-50 p-5"><div className="flex items-center gap-3"><Headphones size={20} className="text-violet-600" /><div><p className="text-sm font-semibold text-[#071a2f]">Escuchá tu grabación antes de entregarla</p><p className="mt-1 text-xs text-violet-700">{savingDraft ? "Guardando automáticamente en Supabase..." : draftSubmission ? "Borrador protegido contra recargas" : "Grabación disponible en esta sesión"}</p></div></div><audio controls src={audioUrl} className="mt-4 w-full" /><a href={audioUrl} download={`practica-${profile.full_name.replaceAll(" ", "-").toLowerCase()}.${audioExtension}`} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-violet-700"><Download size={17} />Descargar copia</a></div>}
           </div>
 
           <div className="rounded-[22px] bg-[#f7f9fa] p-5 sm:p-6">
             <label className="block"><span className="text-sm font-semibold text-slate-700">Tipo de ejercicio</span><select value={exerciseType} onChange={(event) => setExerciseType(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-[#18b8c6]"><option value="llamada">Simulación de llamada</option><option value="objeciones">Respuesta a objeciones</option></select></label>
             <label className="mt-4 block"><span className="text-sm font-semibold text-slate-700">Comentario opcional</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} placeholder="Qué querés mejorar o qué parte te costó..." className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-[#18b8c6]" /></label>
             <div className="mt-4 flex items-center justify-between rounded-xl bg-white px-4 py-3"><span className="text-sm text-slate-500">Puntaje asociado</span><strong className="text-[#071a2f]">{exerciseType === "llamada" ? callScore || progress.lastScore : objectionScore || progress.lastScore}/100</strong></div>
-            <button type="button" onClick={submitAudio} disabled={!audioBlob || sending} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#071a2f] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#18b8c6] hover:text-[#071a2f] disabled:cursor-not-allowed disabled:opacity-40"><Send size={17} />{sending ? "Entregando..." : "Entregar audio"}</button>
-            {message.text && <p className={`mt-4 rounded-xl px-4 py-3 text-sm leading-5 ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{message.text}</p>}
+            <button type="button" onClick={submitAudio} disabled={(!audioBlob && !draftSubmission) || sending || savingDraft} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#071a2f] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#18b8c6] hover:text-[#071a2f] disabled:cursor-not-allowed disabled:opacity-40"><Send size={17} />{sending ? "Entregando..." : savingDraft ? "Guardando borrador..." : "Entregar audio"}</button>
+            {message.text && <p className={`mt-4 rounded-xl px-4 py-3 text-sm leading-5 ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : message.type === "info" ? "bg-cyan-50 text-cyan-800" : "bg-red-50 text-red-700"}`}>{message.text}</p>}
           </div>
         </div>
       </section>
@@ -464,9 +726,9 @@ export default function PracticeClient({ profile }) {
         </div>
 
         <div className="rounded-[26px] border border-slate-200 bg-white p-6 sm:p-8">
-          <div className="flex items-center justify-between"><div><p className="text-xs font-bold tracking-[0.12em] text-slate-400 uppercase">Historial</p><h2 className="mt-1 text-xl font-semibold text-[#071a2f]">Audios entregados</h2></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">Promedio {averageScore}/100</span></div>
+          <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold tracking-[0.12em] text-slate-400 uppercase">Historial</p><h2 className="mt-1 text-xl font-semibold text-[#071a2f]">Grabaciones guardadas</h2></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">Promedio {averageScore}/100</span></div>
           <div className="mt-5 space-y-3">
-            {loadingSubmissions ? <p className="text-sm text-slate-500">Cargando entregas...</p> : submissions.length === 0 ? <div className="rounded-2xl bg-slate-50 px-5 py-6 text-center"><Mic2 size={23} className="mx-auto text-slate-400" /><p className="mt-3 text-sm text-slate-500">Todavía no entregaste ningún audio.</p></div> : submissions.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3"><div><p className="text-sm font-semibold text-[#071a2f]">{item.exercise_type === "objeciones" ? "Respuesta a objeciones" : "Simulación de llamada"}</p><p className="mt-1 text-xs text-slate-500">{new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))} · {formatTime(item.duration_seconds || 0)}</p></div><span className="text-lg font-semibold text-[#0896a5]">{item.score}</span></div>)}
+            {loadingSubmissions ? <p className="text-sm text-slate-500">Cargando grabaciones...</p> : submissions.length === 0 ? <div className="rounded-2xl bg-slate-50 px-5 py-6 text-center"><Mic2 size={23} className="mx-auto text-slate-400" /><p className="mt-3 text-sm text-slate-500">Todavía no hay grabaciones guardadas.</p></div> : submissions.slice(0, 6).map((item) => <div key={item.id} className="rounded-xl border border-slate-200 px-4 py-3"><div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold text-[#071a2f]">{item.exercise_type === "objeciones" ? "Respuesta a objeciones" : "Simulación de llamada"}</p><span className={`rounded-full px-2 py-0.5 text-[0.65rem] font-bold ${item.status === "draft" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{item.status === "draft" ? "Borrador" : "Entregado"}</span></div><p className="mt-1 text-xs text-slate-500">{new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))} · {formatTime(item.duration_seconds || 0)}</p></div><span className="text-lg font-semibold text-[#0896a5]">{item.score}</span></div>{item.audio_url && <audio controls preload="none" src={item.audio_url} className="mt-3 w-full" />}</div>)}
           </div>
         </div>
       </section>
