@@ -1,0 +1,477 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Download,
+  Headphones,
+  Mic2,
+  PhoneCall,
+  Play,
+  RefreshCw,
+  Send,
+  Sparkles,
+  Square,
+  Target,
+  Trophy,
+} from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+
+const scenarios = [
+  {
+    title: "Distribuidor con pedidos por WhatsApp",
+    contact: "Dueño de un distribuidor mayorista",
+    context: "Recibe pedidos por WhatsApp, los copia a una planilla y luego los carga en su sistema.",
+    objective: "Detectar cuánto trabajo manual existe y conseguir una demostración.",
+  },
+  {
+    title: "Fábrica con vendedores externos",
+    contact: "Responsable comercial de una fábrica",
+    context: "Los vendedores toman pedidos y envían listas de precios distintas a cada cliente.",
+    objective: "Mostrar el valor de centralizar precios, clientes, vendedores y pedidos.",
+  },
+  {
+    title: "Mayorista que ya tiene una web",
+    contact: "Gerente de ventas de un mayorista",
+    context: "Tiene una web institucional, pero los clientes todavía hacen los pedidos por mensaje.",
+    objective: "Diferenciar una web tradicional de un canal de ventas mayoristas B2B.",
+  },
+  {
+    title: "Empresa con catálogo desactualizado",
+    contact: "Encargado de administración comercial",
+    context: "Cada cambio de precio o stock obliga a reenviar catálogos y listas.",
+    objective: "Descubrir el costo del desorden y proponer una demostración breve.",
+  },
+];
+
+const objections = [
+  {
+    objection: "Ya trabajamos bien por WhatsApp.",
+    direction: "No discutas. Validá y preguntá qué ocurre después de recibir el pedido.",
+    example: "Perfecto, WhatsApp puede seguir siendo un canal de contacto. ¿Después esos pedidos tienen que cargarlos u organizarlos manualmente en otro sistema?",
+  },
+  {
+    objection: "Ya tenemos una página web.",
+    direction: "Diferenciá presencia institucional de operación mayorista.",
+    example: "Buenísimo. ¿Esa página permite que cada cliente ingrese, vea sus precios y condiciones particulares y haga el pedido mayorista directamente?",
+  },
+  {
+    objection: "Ahora no tenemos tiempo.",
+    direction: "Reducí el compromiso y buscá un próximo paso concreto.",
+    example: "Lo entiendo. No hace falta verlo ahora: coordinemos una demostración breve para el día que les resulte cómodo y ahí deciden si tiene sentido continuar.",
+  },
+  {
+    objection: "No queremos cambiar nuestro sistema.",
+    direction: "Aclarar que primero se analiza la operación y las integraciones.",
+    example: "No buscamos que cambien algo que ya funciona. Primero vemos cómo trabajan hoy y si VentasXMayor puede ordenar el canal de pedidos o integrarse con su operación.",
+  },
+  {
+    objection: "Mandame información.",
+    direction: "Aceptá, pero calificá antes de cortar la conversación.",
+    example: "Claro. Para enviarte algo realmente útil: ¿hoy reciben la mayoría de los pedidos por WhatsApp, vendedores o una plataforma propia?",
+  },
+  {
+    objection: "No soy la persona que decide.",
+    direction: "Pedí orientación sin presionar.",
+    example: "Perfecto, ¿quién coordina las ventas mayoristas o la forma en que reciben y organizan los pedidos?",
+  },
+];
+
+const emptyProgress = {
+  callAttempts: 0,
+  objectionAttempts: 0,
+  audioSubmissions: 0,
+  bestScore: 0,
+  lastScore: 0,
+};
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function randomIndex(length, current) {
+  if (length <= 1) return 0;
+  let next = current;
+  while (next === current) next = Math.floor(Math.random() * length);
+  return next;
+}
+
+export default function PracticeClient({ profile }) {
+  const supabase = useMemo(() => createClient(), []);
+  const progressKey = `marevalux-practice-progress-${profile.id}`;
+
+  const [scenarioIndex, setScenarioIndex] = useState(0);
+  const [callRunning, setCallRunning] = useState(false);
+  const [callSeconds, setCallSeconds] = useState(0);
+  const [callChecks, setCallChecks] = useState({ opening: false, diagnosis: false, value: false, nextStep: false });
+  const [callScore, setCallScore] = useState(0);
+
+  const [objectionIndex, setObjectionIndex] = useState(0);
+  const [objectionAnswer, setObjectionAnswer] = useState("");
+  const [showGuide, setShowGuide] = useState(false);
+  const [objectionChecks, setObjectionChecks] = useState({ validate: false, question: false, clarity: false, nextStep: false });
+  const [objectionScore, setObjectionScore] = useState(0);
+
+  const [progress, setProgress] = useState(emptyProgress);
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(true);
+
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [notes, setNotes] = useState("");
+  const [exerciseType, setExerciseType] = useState("llamada");
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState({ type: "", text: "" });
+
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(progressKey) || "null");
+      if (stored) setProgress({ ...emptyProgress, ...stored });
+    } catch {
+      setProgress(emptyProgress);
+    }
+  }, [progressKey]);
+
+  useEffect(() => {
+    window.localStorage.setItem(progressKey, JSON.stringify(progress));
+  }, [progress, progressKey]);
+
+  useEffect(() => {
+    if (!callRunning) return undefined;
+    const timer = window.setInterval(() => setCallSeconds((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [callRunning]);
+
+  useEffect(() => {
+    if (!recording) return undefined;
+    const timer = window.setInterval(() => setRecordSeconds((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [recording]);
+
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, [audioUrl]);
+
+  async function loadSubmissions() {
+    setLoadingSubmissions(true);
+    const { data, error } = await supabase
+      .from("practice_submissions")
+      .select("id, exercise_type, score, duration_seconds, notes, created_at")
+      .eq("user_id", profile.id)
+      .order("created_at", { ascending: false })
+      .limit(12);
+
+    if (!error) {
+      setSubmissions(data || []);
+      setProgress((current) => ({
+        ...current,
+        audioSubmissions: Math.max(current.audioSubmissions, data?.length || 0),
+      }));
+    }
+    setLoadingSubmissions(false);
+  }
+
+  useEffect(() => {
+    loadSubmissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function resetCall(nextScenario = false) {
+    setCallRunning(false);
+    setCallSeconds(0);
+    setCallScore(0);
+    setCallChecks({ opening: false, diagnosis: false, value: false, nextStep: false });
+    if (nextScenario) setScenarioIndex((current) => randomIndex(scenarios.length, current));
+  }
+
+  function finishCall() {
+    if (!callRunning && callSeconds === 0) return;
+    setCallRunning(false);
+    const completed = Object.values(callChecks).filter(Boolean).length;
+    const timePoints = callSeconds >= 45 && callSeconds <= 180 ? 28 : callSeconds >= 25 ? 18 : 8;
+    const score = Math.min(100, completed * 18 + timePoints);
+    setCallScore(score);
+    setProgress((current) => ({
+      ...current,
+      callAttempts: current.callAttempts + 1,
+      lastScore: score,
+      bestScore: Math.max(current.bestScore, score),
+    }));
+  }
+
+  function evaluateObjection() {
+    const completed = Object.values(objectionChecks).filter(Boolean).length;
+    const lengthPoints = objectionAnswer.trim().length >= 80 ? 24 : objectionAnswer.trim().length >= 35 ? 14 : 5;
+    const score = Math.min(100, completed * 19 + lengthPoints);
+    setObjectionScore(score);
+    setShowGuide(true);
+    setProgress((current) => ({
+      ...current,
+      objectionAttempts: current.objectionAttempts + 1,
+      lastScore: score,
+      bestScore: Math.max(current.bestScore, score),
+    }));
+  }
+
+  function nextObjection() {
+    setObjectionIndex((current) => randomIndex(objections.length, current));
+    setObjectionAnswer("");
+    setShowGuide(false);
+    setObjectionScore(0);
+    setObjectionChecks({ validate: false, question: false, clarity: false, nextStep: false });
+  }
+
+  async function startRecording() {
+    setMessage({ type: "", text: "" });
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setMessage({ type: "error", text: "Este navegador no permite grabar audio. Probá con Chrome o Edge actualizado." });
+      return;
+    }
+
+    try {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      setAudioBlob(null);
+      setAudioUrl("");
+      setRecordSeconds(0);
+      chunksRef.current = [];
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const preferredType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
+          ? "audio/ogg;codecs=opus"
+          : "";
+      const recorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const type = recorder.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type });
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      };
+
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setMessage({ type: "error", text: "No se pudo acceder al micrófono. Revisá el permiso del navegador e intentá nuevamente." });
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
+    setRecording(false);
+  }
+
+  async function submitAudio() {
+    if (!audioBlob) {
+      setMessage({ type: "error", text: "Primero grabá un audio para poder entregarlo." });
+      return;
+    }
+
+    setSending(true);
+    setMessage({ type: "", text: "" });
+
+    const extension = audioBlob.type.includes("ogg") ? "ogg" : "webm";
+    const uniqueId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const filePath = `${profile.id}/${Date.now()}-${uniqueId}.${extension}`;
+    const score = exerciseType === "llamada" ? callScore || progress.lastScore : objectionScore || progress.lastScore;
+
+    const { error: uploadError } = await supabase.storage
+      .from("practice-audios")
+      .upload(filePath, audioBlob, { contentType: extension === "ogg" ? "audio/ogg" : "audio/webm", upsert: false });
+
+    if (uploadError) {
+      setSending(false);
+      setMessage({ type: "error", text: "No se pudo entregar el audio. Verificá que se haya ejecutado el archivo supabase/practica.sql." });
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("practice_submissions").insert({
+      user_id: profile.id,
+      exercise_type: exerciseType,
+      score: Number(score || 0),
+      duration_seconds: recordSeconds,
+      notes: notes.trim() || null,
+      audio_path: filePath,
+    });
+
+    if (insertError) {
+      await supabase.storage.from("practice-audios").remove([filePath]);
+      setSending(false);
+      setMessage({ type: "error", text: "El audio se grabó, pero no pudo registrarse la entrega. Revisá la configuración de Supabase." });
+      return;
+    }
+
+    setProgress((current) => ({ ...current, audioSubmissions: current.audioSubmissions + 1 }));
+    setMessage({ type: "success", text: "Audio entregado correctamente. Ya quedó registrado en tu progreso." });
+    setNotes("");
+    setAudioBlob(null);
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl("");
+    setRecordSeconds(0);
+    await loadSubmissions();
+    setSending(false);
+  }
+
+  const averageScore = submissions.length
+    ? Math.round(submissions.reduce((sum, item) => sum + Number(item.score || 0), 0) / submissions.length)
+    : progress.lastScore;
+
+  const progressGoals = [
+    { label: "Realizar 3 simulaciones", current: progress.callAttempts, target: 3 },
+    { label: "Resolver 5 objeciones", current: progress.objectionAttempts, target: 5 },
+    { label: "Entregar 1 audio", current: Math.max(progress.audioSubmissions, submissions.length), target: 1 },
+    { label: "Alcanzar 70 puntos", current: Math.max(progress.bestScore, averageScore), target: 70 },
+  ];
+  const totalProgress = Math.round(
+    progressGoals.reduce((sum, goal) => sum + Math.min(1, goal.current / goal.target), 0) / progressGoals.length * 100,
+  );
+
+  const currentScenario = scenarios[scenarioIndex];
+  const currentObjection = objections[objectionIndex];
+
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <div className="grid gap-5 lg:grid-cols-[1fr_310px]">
+        <div>
+          <p className="text-xs font-bold tracking-[0.16em] text-[#0896a5] uppercase">Zona práctica · VentasXMayor</p>
+          <h1 className="mt-4 text-[clamp(2.2rem,5vw,4rem)] leading-[1] font-semibold tracking-[-0.055em] text-[#071a2f]">Entrená antes de hablar con un cliente real.</h1>
+          <p className="mt-5 max-w-[760px] text-base leading-7 text-slate-600">Practicá conversaciones de un minuto, respondé objeciones, entregá tu audio y seguí tu evolución desde el mismo panel.</p>
+        </div>
+        <div className="rounded-[24px] bg-[#071a2f] p-6 text-white shadow-[0_18px_50px_rgba(7,26,47,.15)]">
+          <div className="flex items-center justify-between"><span className="text-sm font-semibold">Progreso general</span><Trophy size={20} className="text-cyan-300" /></div>
+          <p className="mt-5 text-4xl font-semibold tracking-[-0.05em]">{totalProgress}%</p>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-[#18b8c6] transition-all" style={{ width: `${totalProgress}%` }} /></div>
+          <p className="mt-4 text-xs leading-5 text-slate-400">Mejor puntaje: <strong className="text-white">{progress.bestScore}/100</strong></p>
+        </div>
+      </div>
+
+      <div className="mt-9 grid gap-6 xl:grid-cols-2">
+        <section id="simulador" className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e9f8fa] text-[#0896a5]"><PhoneCall size={24} /></div><p className="mt-5 text-xs font-bold tracking-[0.14em] text-[#0896a5] uppercase">Simulador de llamadas</p><h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] text-[#071a2f]">Conversación de un minuto</h2></div>
+            <button type="button" onClick={() => resetCall(true)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-cyan-200 hover:text-[#0896a5]" aria-label="Cambiar escenario"><RefreshCw size={17} /></button>
+          </div>
+
+          <div className="mt-6 rounded-2xl bg-[#071a2f] p-5 text-white">
+            <p className="text-xs font-bold tracking-[0.12em] text-cyan-200 uppercase">Escenario</p>
+            <h3 className="mt-2 text-lg font-semibold">{currentScenario.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-300"><strong className="text-white">Hablás con:</strong> {currentScenario.contact}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300"><strong className="text-white">Situación:</strong> {currentScenario.context}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300"><strong className="text-white">Objetivo:</strong> {currentScenario.objective}</p>
+          </div>
+
+          <div className="mt-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <div><p className="text-xs font-semibold text-slate-500">Tiempo de llamada</p><p className="mt-1 font-mono text-2xl font-semibold text-[#071a2f]">{formatTime(callSeconds)}</p></div>
+            {!callRunning ? <button type="button" onClick={() => setCallRunning(true)} className="flex items-center gap-2 rounded-xl bg-[#18b8c6] px-4 py-3 text-sm font-bold text-[#071a2f]"><Play size={17} />Comenzar</button> : <button type="button" onClick={finishCall} className="flex items-center gap-2 rounded-xl bg-[#071a2f] px-4 py-3 text-sm font-bold text-white"><Square size={15} />Finalizar</button>}
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {[
+              ["opening", "Apertura clara"],
+              ["diagnosis", "Preguntas de diagnóstico"],
+              ["value", "Valor sin explicación excesiva"],
+              ["nextStep", "Próximo paso concreto"],
+            ].map(([key, label]) => (
+              <label key={key} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600">
+                <input type="checkbox" checked={callChecks[key]} onChange={(event) => setCallChecks((current) => ({ ...current, [key]: event.target.checked }))} className="h-4 w-4 accent-[#18b8c6]" />{label}
+              </label>
+            ))}
+          </div>
+
+          {callScore > 0 && <div className="mt-5 flex items-center justify-between rounded-2xl bg-cyan-50 px-5 py-4"><div><p className="text-xs font-bold tracking-[0.12em] text-[#0896a5] uppercase">Resultado</p><p className="mt-1 text-sm text-slate-600">Repetí el ejercicio buscando superar tu marca.</p></div><span className="text-3xl font-semibold text-[#071a2f]">{callScore}</span></div>}
+        </section>
+
+        <section id="objeciones" className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><Sparkles size={24} /></div><p className="mt-5 text-xs font-bold tracking-[0.14em] text-amber-600 uppercase">Entrenamiento de objeciones</p><h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] text-[#071a2f]">Respondé sin improvisar</h2></div>
+            <button type="button" onClick={nextObjection} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-amber-200 hover:text-amber-600" aria-label="Cambiar objeción"><RefreshCw size={17} /></button>
+          </div>
+
+          <blockquote className="mt-6 rounded-2xl border-l-4 border-amber-400 bg-amber-50 px-5 py-5 text-xl font-semibold leading-8 text-[#071a2f]">“{currentObjection.objection}”</blockquote>
+          <label className="mt-5 block"><span className="text-sm font-semibold text-slate-700">Escribí cómo responderías</span><textarea value={objectionAnswer} onChange={(event) => setObjectionAnswer(event.target.value)} rows={5} placeholder="Validá, hacé una pregunta y proponé el próximo paso..." className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-[#071a2f] outline-none transition focus:border-[#18b8c6] focus:bg-white focus:ring-4 focus:ring-cyan-100" /></label>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {[
+              ["validate", "Validé sin discutir"],
+              ["question", "Hice una pregunta"],
+              ["clarity", "Respondí con claridad"],
+              ["nextStep", "Propuse un próximo paso"],
+            ].map(([key, label]) => (
+              <label key={key} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600"><input type="checkbox" checked={objectionChecks[key]} onChange={(event) => setObjectionChecks((current) => ({ ...current, [key]: event.target.checked }))} className="h-4 w-4 accent-amber-500" />{label}</label>
+            ))}
+          </div>
+          <button type="button" onClick={evaluateObjection} disabled={!objectionAnswer.trim()} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#071a2f] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#18b8c6] hover:text-[#071a2f] disabled:cursor-not-allowed disabled:opacity-40">Evaluar respuesta<ArrowRight size={17} /></button>
+
+          {showGuide && <div className="mt-5 rounded-2xl bg-slate-50 p-5"><div className="flex items-center justify-between"><p className="text-xs font-bold tracking-[0.12em] text-[#0896a5] uppercase">Guía de mejora</p><span className="text-2xl font-semibold text-[#071a2f]">{objectionScore}</span></div><p className="mt-3 text-sm leading-6 text-slate-600">{currentObjection.direction}</p><p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-slate-700"><strong>Ejemplo:</strong> {currentObjection.example}</p></div>}
+        </section>
+      </div>
+
+      <section id="audio" className="mt-6 rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="grid gap-7 lg:grid-cols-[1fr_360px]">
+          <div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-600"><Mic2 size={24} /></div>
+            <p className="mt-5 text-xs font-bold tracking-[0.14em] text-violet-600 uppercase">Grabación y entrega</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] text-[#071a2f]">Presentación comercial en audio</h2>
+            <p className="mt-3 max-w-[670px] text-sm leading-6 text-slate-600">Grabá una conversación de aproximadamente un minuto como si hablaras con el dueño de un mayorista, distribuidor o fábrica. Escuchala y entregala cuando estés conforme.</p>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              {!recording ? <button type="button" onClick={startRecording} className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white"><Mic2 size={18} />Comenzar grabación</button> : <button type="button" onClick={stopRecording} className="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white"><Square size={18} />Detener</button>}
+              <span className={`rounded-xl px-4 py-3 font-mono text-sm font-semibold ${recording ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-600"}`}>{recording ? "Grabando " : "Duración "}{formatTime(recordSeconds)}</span>
+            </div>
+
+            {audioUrl && <div className="mt-5 rounded-2xl border border-violet-100 bg-violet-50 p-5"><div className="flex items-center gap-3"><Headphones size={20} className="text-violet-600" /><p className="text-sm font-semibold text-[#071a2f]">Escuchá tu grabación antes de entregarla</p></div><audio controls src={audioUrl} className="mt-4 w-full" /><a href={audioUrl} download={`practica-${profile.full_name.replaceAll(" ", "-").toLowerCase()}.${audioBlob?.type.includes("ogg") ? "ogg" : "webm"}`} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-violet-700"><Download size={17} />Descargar copia</a></div>}
+          </div>
+
+          <div className="rounded-[22px] bg-[#f7f9fa] p-5 sm:p-6">
+            <label className="block"><span className="text-sm font-semibold text-slate-700">Tipo de ejercicio</span><select value={exerciseType} onChange={(event) => setExerciseType(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-[#18b8c6]"><option value="llamada">Simulación de llamada</option><option value="objeciones">Respuesta a objeciones</option></select></label>
+            <label className="mt-4 block"><span className="text-sm font-semibold text-slate-700">Comentario opcional</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} placeholder="Qué querés mejorar o qué parte te costó..." className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-[#18b8c6]" /></label>
+            <div className="mt-4 flex items-center justify-between rounded-xl bg-white px-4 py-3"><span className="text-sm text-slate-500">Puntaje asociado</span><strong className="text-[#071a2f]">{exerciseType === "llamada" ? callScore || progress.lastScore : objectionScore || progress.lastScore}/100</strong></div>
+            <button type="button" onClick={submitAudio} disabled={!audioBlob || sending} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#071a2f] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#18b8c6] hover:text-[#071a2f] disabled:cursor-not-allowed disabled:opacity-40"><Send size={17} />{sending ? "Entregando..." : "Entregar audio"}</button>
+            {message.text && <p className={`mt-4 rounded-xl px-4 py-3 text-sm leading-5 ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{message.text}</p>}
+          </div>
+        </div>
+      </section>
+
+      <section id="progreso" className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <div className="rounded-[26px] border border-slate-200 bg-white p-6 sm:p-8">
+          <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-50 text-[#0896a5]"><Target size={22} /></div><div><p className="text-xs font-bold tracking-[0.12em] text-[#0896a5] uppercase">Puntajes y progreso</p><h2 className="mt-1 text-xl font-semibold text-[#071a2f]">Objetivos de práctica</h2></div></div>
+          <div className="mt-6 space-y-5">
+            {progressGoals.map((goal) => {
+              const percent = Math.min(100, Math.round(goal.current / goal.target * 100));
+              return <div key={goal.label}><div className="flex items-center justify-between gap-4 text-sm"><span className="font-medium text-slate-600">{goal.label}</span><span className="font-bold text-[#071a2f]">{Math.min(goal.current, goal.target)}/{goal.target}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#18b8c6]" style={{ width: `${percent}%` }} /></div></div>;
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-[26px] border border-slate-200 bg-white p-6 sm:p-8">
+          <div className="flex items-center justify-between"><div><p className="text-xs font-bold tracking-[0.12em] text-slate-400 uppercase">Historial</p><h2 className="mt-1 text-xl font-semibold text-[#071a2f]">Audios entregados</h2></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">Promedio {averageScore}/100</span></div>
+          <div className="mt-5 space-y-3">
+            {loadingSubmissions ? <p className="text-sm text-slate-500">Cargando entregas...</p> : submissions.length === 0 ? <div className="rounded-2xl bg-slate-50 px-5 py-6 text-center"><Mic2 size={23} className="mx-auto text-slate-400" /><p className="mt-3 text-sm text-slate-500">Todavía no entregaste ningún audio.</p></div> : submissions.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3"><div><p className="text-sm font-semibold text-[#071a2f]">{item.exercise_type === "objeciones" ? "Respuesta a objeciones" : "Simulación de llamada"}</p><p className="mt-1 text-xs text-slate-500">{new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))} · {formatTime(item.duration_seconds || 0)}</p></div><span className="text-lg font-semibold text-[#0896a5]">{item.score}</span></div>)}
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-6 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-[#e9f8fa] px-5 py-4 text-sm leading-6 text-slate-700"><CheckCircle2 size={19} className="mt-0.5 shrink-0 text-[#0896a5]" /><p>La meta no es memorizar un discurso. Es aprender a escuchar, diagnosticar y conducir la conversación hacia un próximo paso claro.</p></div>
+    </div>
+  );
+}

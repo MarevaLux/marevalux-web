@@ -9,8 +9,10 @@ import {
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
-import Brand from "../../../components/Brand";
-import { logoutAction } from "../../actions";
+import Brand from "../../../../components/Brand";
+import { logoutAction } from "../../../actions";
+import { requireTeamSession } from "../../../auth";
+import PracticeClient from "./PracticeClient";
 
 const navigation = [
   [Home, "Inicio", "/equipo/panel"],
@@ -21,7 +23,14 @@ const navigation = [
   [CircleHelp, "Objeciones", "/equipo/panel/ventasxmayor/objeciones-respuestas"],
 ];
 
-export default function CrmShell({ profile, active = "Prospectos", children }) {
+export const metadata = {
+  title: "Zona práctica | MarevaLux",
+  description: "Simulador comercial, objeciones, audios y progreso del equipo MarevaLux.",
+  robots: { index: false, follow: false },
+};
+
+export default async function PracticePage() {
+  const { profile } = await requireTeamSession();
   const initials = profile.full_name
     .split(" ")
     .filter(Boolean)
@@ -50,7 +59,7 @@ export default function CrmShell({ profile, active = "Prospectos", children }) {
           <p className="px-3 pt-2 text-[0.68rem] font-bold tracking-[0.15em] text-slate-400 uppercase">Centro comercial</p>
           <nav className="mt-4 space-y-1" aria-label="Panel comercial">
             {navigation.map(([Icon, label, href]) => (
-              <Link key={label} href={href} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${active === label ? "bg-[#e9f8fa] text-[#077f8c]" : "text-slate-500 hover:bg-slate-50 hover:text-[#071a2f]"}`}>
+              <Link key={label} href={href} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${label === "Práctica" ? "bg-[#e9f8fa] text-[#077f8c]" : "text-slate-500 hover:bg-slate-50 hover:text-[#071a2f]"}`}>
                 <Icon size={18} />{label}
               </Link>
             ))}
@@ -58,8 +67,8 @@ export default function CrmShell({ profile, active = "Prospectos", children }) {
 
           <div className="mt-auto rounded-2xl bg-[#071a2f] p-5 text-white">
             <ShieldCheck size={21} className="text-cyan-300" />
-            <p className="mt-4 text-sm font-semibold">Información protegida</p>
-            <p className="mt-2 text-xs leading-5 text-slate-400">Cada vendedor accede únicamente a las oportunidades autorizadas.</p>
+            <p className="mt-4 text-sm font-semibold">Práctica protegida</p>
+            <p className="mt-2 text-xs leading-5 text-slate-400">Cada entrega queda asociada al usuario que inició sesión.</p>
           </div>
 
           <form action={logoutAction} className="mt-4">
@@ -70,10 +79,10 @@ export default function CrmShell({ profile, active = "Prospectos", children }) {
         <section className="min-w-0 px-4 py-6 sm:px-7 lg:px-10 lg:py-9 xl:px-14">
           <nav className="mb-6 flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="Navegación móvil">
             {navigation.slice(0, 4).map(([Icon, label, href]) => (
-              <Link key={label} href={href} className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${active === label ? "bg-[#071a2f] text-white" : "border border-slate-200 bg-white text-slate-600"}`}><Icon size={16} />{label}</Link>
+              <Link key={label} href={href} className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${label === "Práctica" ? "bg-[#071a2f] text-white" : "border border-slate-200 bg-white text-slate-600"}`}><Icon size={16} />{label}</Link>
             ))}
           </nav>
-          {children}
+          <PracticeClient profile={profile} />
         </section>
       </div>
     </main>
